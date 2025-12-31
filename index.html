@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Jump’n’Run – Patenschaft (Miriam)</title>
+  <title>Jump’n’Run – Quest Reveal</title>
   <style>
     html, body { margin:0; height:100%; background:#0b0f1a; overflow:hidden; }
     canvas { display:block; margin:0 auto; background:#0b0f1a; touch-action:none; }
@@ -16,26 +16,24 @@
       border-radius:14px; padding:10px 12px; user-select:none;
       box-shadow: 0 10px 30px rgba(0,0,0,.35);
     }
-    .hint{ opacity:.8; font-size:12px; margin-top:6px; max-width: 280px; }
+    .hint{ opacity:.8; font-size:12px; margin-top:6px; max-width: 260px; }
 
     .controls{
       position:fixed; left:0; right:0; bottom:0; z-index:10;
       display:flex; justify-content:space-between; align-items:flex-end;
-      padding:14px; gap:12px;
-      pointer-events:none;
+      padding:14px; gap:12px; pointer-events:none;
     }
     .pad{ display:flex; gap:12px; pointer-events:auto; }
-    button.btn{
-      width:74px; height:74px; border-radius:18px;
+    .btn{
+      width:72px; height:72px; border-radius:18px;
       border:1px solid rgba(46,58,102,1);
-      background: rgba(26,37,80,.78);
+      background: rgba(26,37,80,.75);
       color:#e7ecff; font-weight:900; font-size:26px;
       display:grid; place-items:center;
       box-shadow: 0 12px 32px rgba(0,0,0,.35);
       user-select:none;
-      touch-action:none;
     }
-    button.btn:active{ transform: translateY(1px); filter: brightness(1.1); }
+    .btn:active{ transform: translateY(1px); filter: brightness(1.1); }
 
     .overlay{
       position:fixed; inset:0; display:none; align-items:center; justify-content:center;
@@ -43,7 +41,7 @@
       font-family: system-ui, Arial, sans-serif; color:#e7ecff;
     }
     .card{
-      width:min(760px, calc(100% - 28px));
+      width:min(720px, calc(100% - 28px));
       background:#121a2f; border:1px solid #243055;
       border-radius:18px; padding:18px;
       box-shadow: 0 12px 40px rgba(0,0,0,.45);
@@ -51,11 +49,11 @@
     .title{ font-size:20px; font-weight:900; margin:0 0 8px; }
     .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre-wrap; }
     .btnrow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
-    .smallbtn{
+    button{
       border:1px solid #2e3a66; background:#1a2550; color:#e7ecff;
       padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:800;
     }
-    .smallbtn:hover{ filter:brightness(1.08); }
+    button:hover{ filter:brightness(1.1); }
   </style>
 </head>
 <body>
@@ -63,174 +61,119 @@
 
   <div class="hud">
     <div>❤️ Herzen: <b id="score">0</b> / <b id="target">7</b></div>
-    <div class="hint">Handy: ◀ ▶ + ⤴︎ · PC: Pfeile/WASD + Leertaste</div>
+    <div class="hint">Handy: ◀ ▶ + ⤴︎ · PC: Pfeile/WASD + Space</div>
   </div>
 
   <div class="controls">
     <div class="pad">
-      <button class="btn" id="left"  type="button">◀</button>
-      <button class="btn" id="right" type="button">▶</button>
+      <div class="btn" id="left">◀</div>
+      <div class="btn" id="right">▶</div>
     </div>
     <div class="pad">
-      <button class="btn" id="jump" type="button">⤴︎</button>
+      <div class="btn" id="jump">⤴︎</div>
     </div>
   </div>
 
-  <div id="overlay" class="overlay" aria-hidden="true">
+  <div id="overlay" class="overlay">
     <div class="card">
       <p class="title">🏆 Achievement unlocked</p>
       <div id="revealText" class="mono"></div>
       <div class="btnrow">
-        <button class="smallbtn" id="restart" type="button">Nochmal spielen</button>
-        <button class="smallbtn" id="close" type="button">Schließen</button>
+        <button id="restart">Nochmal spielen</button>
+        <button id="close">Schließen</button>
       </div>
     </div>
   </div>
 
 <script>
   // ========= HIER ANPASSEN =========
-  const PERSON_NAME = "Miriam";
-  const ROLE        = "Patentante";
-  const TARGET      = 7;
+  const PERSON_NAME = "DEIN NAME HIER";  // z.B. "Max"
+  const ROLE        = "Patenonkel";      // oder "Patentante"
+  const TARGET      = 7;                 // Herzen bis Reveal
   const BABY_LINE   = "Du wurdest für eine legendäre Nebenquest ausgewählt.";
-  // =================================
+  // ================================
 
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
   const scoreEl = document.getElementById("score");
   const targetEl = document.getElementById("target");
-  const overlay = document.getElementById("overlay");
-  const revealText = document.getElementById("revealText");
-  const restartBtn = document.getElementById("restart");
-  const closeBtn = document.getElementById("close");
   targetEl.textContent = String(TARGET);
 
-  // --- Safety: Wenn irgendwas schiefgeht, zeigen wir es statt "Freeze"
-  function showEndScreen(text){
-    if (!overlay || !revealText) { alert(text); return; }
-    revealText.textContent = text;
-    overlay.style.display = "flex";
-    overlay.setAttribute("aria-hidden", "false");
-  }
-  window.addEventListener("error", (e) => {
-    showEndScreen("🚨 Fehler im Spiel\n\n" + (e.message || "Unbekannt"));
-  });
-  window.addEventListener("unhandledrejection", (e) => {
-    showEndScreen("🚨 Fehler im Spiel\n\n" + String(e.reason));
-  });
+  const overlay = document.getElementById("overlay");
+  const revealText = document.getElementById("revealText");
+  document.getElementById("restart").onclick = () => location.reload();
+  document.getElementById("close").onclick = () => overlay.style.display = "none";
 
-  // --- Canvas sizing
-  let W = 900, H = 560, dpr = 1;
+  let W=900,H=520,dpr=1;
   function resize(){
-    dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-    W = Math.min(980, window.innerWidth) | 0;
-    H = Math.max(460, Math.min(700, window.innerHeight)) | 0;
-    canvas.style.width = W + "px";
-    canvas.style.height = H + "px";
-    canvas.width = (W * dpr) | 0;
-    canvas.height = (H * dpr) | 0;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    dpr = Math.max(1, Math.min(2, devicePixelRatio||1));
+    W = Math.min(980, innerWidth)|0;
+    H = Math.max(460, Math.min(620, innerHeight))|0;
+    canvas.style.width=W+"px"; canvas.style.height=H+"px";
+    canvas.width=(W*dpr)|0; canvas.height=(H*dpr)|0;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
   }
-  window.addEventListener("resize", resize);
-  resize();
+  addEventListener("resize", resize); resize();
 
-  // --- Helpers
-  const clamp = (x,a,b) => Math.max(a, Math.min(b, x));
-  const rect = (x,y,w,h) => ({x,y,w,h});
-  const aabb = (a,b) => (a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y);
+  const world = { width: 4200, groundY: 420, gravity: 1900 };
+  const rect = (x,y,w,h)=>({x,y,w,h});
+  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+  const aabb=(a,b)=>a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
 
-  // --- World
-  const world = {
-    width: 4300,
-    groundY: 430,
-    gravity: 2000
-  };
-
-  // Platforms
   const platforms = [
-    rect(0, world.groundY, world.width, 140),
-    rect(360,  340, 190, 18),
-    rect(700,  290, 200, 18),
-    rect(1040, 330, 160, 18),
-    rect(1340, 270, 240, 18),
-    rect(1700, 350, 180, 18),
-    rect(2060, 310, 210, 18),
-    rect(2440, 270, 240, 18),
-    rect(2810, 330, 190, 18),
-    rect(3200, 290, 240, 18),
-    rect(3600, 350, 180, 18),
-    rect(3920, 310, 240, 18)
+    rect(0, world.groundY, world.width, 120),
+    rect(420, 330, 160, 18), rect(720, 280, 180, 18),
+    rect(1050, 320, 140, 18), rect(1350, 260, 220, 18),
+    rect(1680, 340, 160, 18), rect(2020, 300, 180, 18),
+    rect(2350, 260, 220, 18), rect(2700, 320, 170, 18),
+    rect(3040, 280, 220, 18), rect(3400, 330, 160, 18),
+    rect(3700, 290, 220, 18)
   ];
 
-  // Hazards
   const hazards = [
-    rect(600,  world.groundY-18, 100, 18),
-    rect(1240, world.groundY-18, 120, 18),
-    rect(1960, world.groundY-18, 140, 18),
-    rect(3150, world.groundY-18, 170, 18)
+    rect(620,  world.groundY-18, 80, 18),
+    rect(1250, world.groundY-18, 90, 18),
+    rect(1900, world.groundY-18, 110, 18),
+    rect(3180, world.groundY-18, 140, 18)
   ];
 
-  // Hearts
-  function makeHearts(){
-    return [
-      {x: 410,  y: 310, taken:false, t:0},
-      {x: 770,  y: 260, taken:false, t:0},
-      {x: 1090, y: 300, taken:false, t:0},
-      {x: 1460, y: 240, taken:false, t:0},
-      {x: 1760, y: 320, taken:false, t:0},
-      {x: 2130, y: 280, taken:false, t:0},
-      {x: 2560, y: 240, taken:false, t:0},
-      {x: 2890, y: 300, taken:false, t:0},
-      {x: 3320, y: 260, taken:false, t:0},
-      {x: 3680, y: 320, taken:false, t:0},
-      {x: 4040, y: 280, taken:false, t:0}
-    ];
+  let hearts = [
+    {x:460,y:300,taken:false,t:0},{x:760,y:250,taken:false,t:0},{x:1110,y:290,taken:false,t:0},
+    {x:1440,y:230,taken:false,t:0},{x:1720,y:310,taken:false,t:0},{x:2060,y:270,taken:false,t:0},
+    {x:2440,y:230,taken:false,t:0},{x:2760,y:290,taken:false,t:0},{x:3100,y:250,taken:false,t:0},
+    {x:3460,y:300,taken:false,t:0},{x:3780,y:260,taken:false,t:0}
+  ];
+
+  const goal = rect(world.width-120, world.groundY-90, 50, 90);
+
+  const player = { x:80,y:world.groundY-60,w:34,h:44,vx:0,vy:0,speed:320,jump:720,onGround:false };
+  let score=0, playing=true, camX=0;
+
+  const input={left:false,right:false,jump:false};
+  const keys=new Set();
+  addEventListener("keydown",e=>keys.add(e.key));
+  addEventListener("keyup",e=>keys.delete(e.key));
+
+  function bindButton(id, key){
+    const el=document.getElementById(id);
+    let pid=null;
+    el.addEventListener("pointerdown",e=>{pid=e.pointerId; el.setPointerCapture(pid); input[key]=true; e.preventDefault();});
+    el.addEventListener("pointerup",e=>{if(e.pointerId!==pid) return; input[key]=false; pid=null; e.preventDefault();});
+    el.addEventListener("pointercancel",()=>{input[key]=false; pid=null;});
   }
-  let hearts = makeHearts();
+  bindButton("left","left"); bindButton("right","right"); bindButton("jump","jump");
 
-  // Goal
-  const goal = rect(world.width - 140, world.groundY - 95, 56, 95);
-
-  // Player
-  const player = {
-    x: 80, y: world.groundY - 62, w: 34, h: 46,
-    vx: 0, vy: 0,
-    speed: 340,
-    jump: 780,
-    onGround: false
-  };
-
-  let camX = 0;
-  let score = 0;
-  let playing = true;
-  let ended = false;
-
-  function resetPlayer(){
-    player.x = 80;
-    player.y = world.groundY - 62;
-    player.vx = 0;
-    player.vy = 0;
-    player.onGround = false;
+  function updateKeyboard(){
+    input.left  = input.left  || keys.has("ArrowLeft") || keys.has("a") || keys.has("A");
+    input.right = input.right || keys.has("ArrowRight")|| keys.has("d") || keys.has("D");
+    input.jump  = input.jump  || keys.has("ArrowUp")   || keys.has("w") || keys.has("W") || keys.has(" ");
   }
 
-  function resetGame(){
-    score = 0;
-    scoreEl.textContent = "0";
-    hearts = makeHearts();
-    camX = 0;
-    playing = true;
-    ended = false;
-    overlay.style.display = "none";
-    overlay.setAttribute("aria-hidden", "true");
-    resetPlayer();
-  }
+  function resetPlayer(){ player.x=80; player.y=world.groundY-60; player.vx=0; player.vy=0; }
 
   function reveal(){
-    if (ended) return;
-    ended = true;
-    playing = false;
-
-    showEndScreen(
+    playing=false;
+    revealText.textContent =
 `NEUE QUEST: Patenschaft
 ======================
 NPC: ${PERSON_NAME}
@@ -243,299 +186,138 @@ Belohnung:
 +999 Herzpunkte
 +1 Bonus-Familie
 
-Willst du mein(e) ${ROLE} sein? 💛`
-    );
-    burstConfetti();
+Willst du mein(e) ${ROLE} sein? 💛`;
+    overlay.style.display="flex";
   }
 
-  restartBtn.addEventListener("click", resetGame);
-  closeBtn.addEventListener("click", () => {
-    overlay.style.display = "none";
-    overlay.setAttribute("aria-hidden", "true");
-  });
-
-  // --- Input
-  const input = { left:false, right:false, jumpHeld:false, jumpPressed:false };
-  const keys = new Set();
-
-  window.addEventListener("keydown", (e) => {
-    keys.add(e.key);
-    if (e.key === " " || e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
-      input.jumpPressed = true;
-      input.jumpHeld = true;
-    }
-  });
-  window.addEventListener("keyup", (e) => {
-    keys.delete(e.key);
-    if (e.key === " " || e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
-      input.jumpHeld = false;
-    }
-  });
-
-  function syncKeyboard(){
-    input.left  = keys.has("ArrowLeft") || keys.has("a") || keys.has("A");
-    input.right = keys.has("ArrowRight") || keys.has("d") || keys.has("D");
-    // jumpHeld/jumpPressed wird oben gesetzt (damit "Pressed" nur einmal zählt)
-  }
-
-  // Touch Buttons via Pointer Events
-  function bindHoldButton(el, setFlag){
-    let pid = null;
-    el.addEventListener("pointerdown", (e) => {
-      pid = e.pointerId;
-      el.setPointerCapture(pid);
-      setFlag(true);
-      e.preventDefault();
-    });
-    el.addEventListener("pointerup", (e) => {
-      if (e.pointerId !== pid) return;
-      setFlag(false);
-      pid = null;
-      e.preventDefault();
-    });
-    el.addEventListener("pointercancel", () => { setFlag(false); pid = null; });
-  }
-
-  bindHoldButton(document.getElementById("left"),  v => input.left  = v);
-  bindHoldButton(document.getElementById("right"), v => input.right = v);
-
-  // Jump: pressed + held
-  (function(){
-    const el = document.getElementById("jump");
-    let pid = null;
-    el.addEventListener("pointerdown", (e) => {
-      pid = e.pointerId;
-      el.setPointerCapture(pid);
-      input.jumpHeld = true;
-      input.jumpPressed = true; // nur einmal pro Tap
-      e.preventDefault();
-    });
-    el.addEventListener("pointerup", (e) => {
-      if (e.pointerId !== pid) return;
-      input.jumpHeld = false;
-      pid = null;
-      e.preventDefault();
-    });
-    el.addEventListener("pointercancel", () => { input.jumpHeld = false; pid = null; });
-  })();
-
-  // --- Physics / collisions
-  function collidePlatforms(axis){
-    const p = rect(player.x, player.y, player.w, player.h);
-    for (const pl of platforms){
-      if (!aabb(p, pl)) continue;
-
-      if (axis === "x"){
-        if (player.vx > 0) player.x = pl.x - player.w;
-        else if (player.vx < 0) player.x = pl.x + pl.w;
-        p.x = player.x;
-      } else {
-        if (player.vy > 0){
-          player.y = pl.y - player.h;
-          player.vy = 0;
-          player.onGround = true;
-        } else if (player.vy < 0){
-          player.y = pl.y + pl.h;
-          player.vy = 0;
-        }
-        p.y = player.y;
+  function collide(axis){
+    const p=rect(player.x,player.y,player.w,player.h);
+    for(const pl of platforms){
+      if(!aabb(p,pl)) continue;
+      if(axis==="x"){
+        if(player.vx>0) player.x=pl.x-player.w;
+        else if(player.vx<0) player.x=pl.x+pl.w;
+        p.x=player.x;
+      }else{
+        if(player.vy>0){ player.y=pl.y-player.h; player.vy=0; player.onGround=true; }
+        else if(player.vy<0){ player.y=pl.y+pl.h; player.vy=0; }
+        p.y=player.y;
       }
     }
   }
 
-  // --- Confetti
-  let confetti = [];
-  function burstConfetti(){
-    confetti = [];
-    for (let i=0;i<170;i++){
-      confetti.push({
-        x: Math.random()*W, y: -Math.random()*H*0.2,
-        vx: (Math.random()*2-1)*140,
-        vy: 60 + Math.random()*260,
-        r: 2 + Math.random()*4,
-        rot: Math.random()*Math.PI*2,
-        vr: (Math.random()*2-1)*7,
-        life: 1.6 + Math.random()*1.6
-      });
-    }
-  }
-  function stepConfetti(dt){
-    if (!confetti.length) return;
-    for (const p of confetti){
-      p.life -= dt;
-      p.x += p.vx * dt;
-      p.y += p.vy * dt;
-      p.vy += 340 * dt;
-      p.rot += p.vr * dt;
-    }
-    confetti = confetti.filter(p => p.life > 0 && p.y < H + 60);
-  }
-
-  // --- Main loop
-  let last = performance.now();
+  let last=performance.now();
   function loop(now){
-    const dt = Math.min(0.033, (now - last)/1000);
-    last = now;
+    const dt=Math.min(0.033,(now-last)/1000); last=now;
 
-    syncKeyboard();
-    if (playing) step(dt);
-    stepConfetti(dt);
+    updateKeyboard();
+
+    if(playing){
+      let move=0; if(input.left) move-=1; if(input.right) move+=1;
+      player.vx=move*player.speed;
+
+      if(input.jump && player.onGround){ player.vy=-player.jump; player.onGround=false; }
+      player.vy += world.gravity*dt;
+
+      player.x += player.vx*dt; player.x=clamp(player.x,0,world.width-player.w); collide("x");
+      player.y += player.vy*dt; player.onGround=false; collide("y");
+
+      camX=clamp(player.x-W*0.35,0,world.width-W);
+
+      const pbox=rect(player.x,player.y,player.w,player.h);
+
+      for(const h of hearts){
+        if(h.taken) continue;
+        const hb=rect(h.x-12,h.y-12,24,24);
+        if(aabb(pbox,hb)){
+          h.taken=true; score++; scoreEl.textContent=String(score);
+          if(score>=TARGET) reveal();
+        }
+      }
+
+      for(const hz of hazards){
+        if(aabb(pbox,hz)){ score=Math.max(0,score-1); scoreEl.textContent=String(score); resetPlayer(); break; }
+      }
+
+      if(aabb(pbox,goal)) reveal();
+
+      if(!keys.size){ input.left=false; input.right=false; input.jump=false; }
+    }
+
     draw();
-
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
 
-  function step(dt){
-    // move
-    let move = 0;
-    if (input.left) move -= 1;
-    if (input.right) move += 1;
-    player.vx = move * player.speed;
-
-    // jump (nur einmal pro Druck)
-    if (input.jumpPressed && player.onGround){
-      player.vy = -player.jump;
-      player.onGround = false;
-    }
-    input.jumpPressed = false;
-
-    // gravity
-    player.vy += world.gravity * dt;
-
-    // X
-    player.x += player.vx * dt;
-    player.x = clamp(player.x, 0, world.width - player.w);
-    collidePlatforms("x");
-
-    // Y
-    player.y += player.vy * dt;
-    player.onGround = false;
-    collidePlatforms("y");
-
-    // camera
-    camX = clamp(player.x - W*0.35, 0, world.width - W);
-
-    const pbox = rect(player.x, player.y, player.w, player.h);
-
-    // collect hearts
-    for (const h of hearts){
-      if (h.taken) continue;
-      const hb = rect(h.x - 12, h.y - 12, 24, 24);
-      if (aabb(pbox, hb)){
-        h.taken = true;
-        score++;
-        scoreEl.textContent = String(score);
-        if (score >= TARGET) { reveal(); return; }
-      }
-    }
-
-    // hazards
-    for (const hz of hazards){
-      if (aabb(pbox, hz)){
-        score = Math.max(0, score - 1);
-        scoreEl.textContent = String(score);
-        resetPlayer();
-        break;
-      }
-    }
-
-    // goal
-    if (aabb(pbox, goal)) reveal();
-  }
-
-  // --- Drawing
   function draw(){
     ctx.clearRect(0,0,W,H);
 
-    // stars
-    ctx.globalAlpha = 0.25;
-    for (let i=0;i<70;i++){
-      ctx.fillRect((i*131 % W), (i*241 % H), 2, 2);
-    }
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha=0.25;
+    for(let i=0;i<70;i++) ctx.fillRect((i*131%W),(i*241%H),2,2);
+    ctx.globalAlpha=1;
 
-    // border
-    ctx.strokeStyle = "rgba(36,48,85,.9)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(8, 8, W-16, H-16);
+    ctx.strokeStyle="rgba(36,48,85,.9)";
+    ctx.lineWidth=2;
+    ctx.strokeRect(8,8,W-16,H-16);
 
-    ctx.save();
-    ctx.translate(-camX, 0);
+    ctx.save(); ctx.translate(-camX,0);
 
-    // platforms
-    for (const pl of platforms){
-      ctx.fillStyle = "rgba(18,26,47,1)";
-      ctx.fillRect(pl.x, pl.y, pl.w, pl.h);
-      ctx.strokeStyle = "rgba(36,48,85,.9)";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(pl.x, pl.y, pl.w, pl.h);
+    for(const pl of platforms){
+      ctx.fillStyle="rgba(18,26,47,1)";
+      ctx.fillRect(pl.x,pl.y,pl.w,pl.h);
+      ctx.strokeStyle="rgba(36,48,85,.9)";
+      ctx.strokeRect(pl.x,pl.y,pl.w,pl.h);
     }
 
-    // hazards (spikes)
-    for (const hz of hazards){
-      ctx.strokeStyle = "rgba(231,236,255,.75)";
-      ctx.lineWidth = 2;
-      const n = Math.floor(hz.w / 12);
-      for (let i=0;i<n;i++){
-        const x = hz.x + i*12;
+    for(const hz of hazards){
+      ctx.strokeStyle="rgba(231,236,255,.7)";
+      ctx.lineWidth=2;
+      const n=(hz.w/12)|0;
+      for(let i=0;i<n;i++){
+        const x=hz.x+i*12;
         ctx.beginPath();
-        ctx.moveTo(x, hz.y + hz.h);
-        ctx.lineTo(x+6, hz.y);
-        ctx.lineTo(x+12, hz.y + hz.h);
+        ctx.moveTo(x,hz.y+hz.h);
+        ctx.lineTo(x+6,hz.y);
+        ctx.lineTo(x+12,hz.y+hz.h);
         ctx.stroke();
       }
     }
 
-    // goal
-    ctx.fillStyle = "rgba(231,236,255,.85)";
-    ctx.fillRect(goal.x+10, goal.y, 6, goal.h);
-    ctx.fillStyle = "rgba(255,255,255,.9)";
+    // Goal
+    ctx.fillStyle="rgba(231,236,255,.85)";
+    ctx.fillRect(goal.x+8,goal.y,6,goal.h);
+    ctx.fillStyle="rgba(255,255,255,.9)";
     ctx.beginPath();
-    ctx.moveTo(goal.x+16, goal.y+12);
-    ctx.lineTo(goal.x+54, goal.y+24);
-    ctx.lineTo(goal.x+16, goal.y+36);
+    ctx.moveTo(goal.x+14,goal.y+10);
+    ctx.lineTo(goal.x+48,goal.y+22);
+    ctx.lineTo(goal.x+14,goal.y+34);
     ctx.closePath();
     ctx.fill();
-    ctx.font = "16px system-ui, Arial";
-    ctx.fillText("🏁", goal.x+24, goal.y+72);
+    ctx.font="16px system-ui, Arial";
+    ctx.fillText("🏁",goal.x+22,goal.y+70);
 
-    // hearts
-    for (const h of hearts){
-      if (h.taken) continue;
-      h.t += 0.08;
-      const pulse = 1 + Math.sin(h.t) * 0.08;
+    // Hearts
+    for(const h of hearts){
+      if(h.taken) continue;
+      h.t += 0.06;
+      const pulse=1+Math.sin(h.t)*0.08;
       ctx.save();
-      ctx.translate(h.x, h.y);
-      ctx.scale(pulse, pulse);
-      ctx.font = "26px system-ui, Arial";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText("❤️", 0, 0);
+      ctx.translate(h.x,h.y);
+      ctx.scale(pulse,pulse);
+      ctx.font="26px system-ui, Arial";
+      ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillText("❤️",0,0);
       ctx.restore();
     }
 
-    // player
-    ctx.fillStyle = "rgba(231,236,255,.92)";
-    ctx.fillRect(player.x, player.y, player.w, player.h);
-    ctx.strokeStyle = "rgba(36,48,85,.9)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(player.x, player.y, player.w, player.h);
+    // Player
+    ctx.fillStyle="rgba(231,236,255,.92)";
+    ctx.fillRect(player.x,player.y,player.w,player.h);
+    ctx.strokeStyle="rgba(36,48,85,.9)";
+    ctx.strokeRect(player.x,player.y,player.w,player.h);
 
     ctx.restore();
-
-    // confetti (screen space)
-    if (confetti.length){
-      for (const p of confetti){
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rot);
-        ctx.fillRect(-p.r, -p.r, p.r*2, p.r*2);
-        ctx.restore();
-      }
-    }
   }
 </script>
 </body>
 </html>
-
