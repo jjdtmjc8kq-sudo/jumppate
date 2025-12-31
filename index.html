@@ -103,7 +103,29 @@
   targetEl.textContent = String(TARGET);
 
   const overlay = document.getElementById("overlay");
-  const revealText = document.getElementById("revealText");
+  const revealText = document.getElementById("let ended = false;
+function reveal(){
+  if (ended) return;
+  ended = true;
+
+  playing = false; // <- Das ist der "Freeze" (gewolltes Spielende)
+
+  showEndScreen(
+`NEUE QUEST: Patenschaft
+======================
+NPC: ${PERSON_NAME}
+Rolle: ${ROLE}
+
+${BABY_LINE}
+
+Belohnung:
++∞ Liebe
++999 Herzpunkte
++1 Bonus-Familie
+
+Willst du mein(e) ${ROLE} sein? 💛`);
+}
+");
   const restartBtn = document.getElementById("restart");
   const closeBtn = document.getElementById("close");
 
